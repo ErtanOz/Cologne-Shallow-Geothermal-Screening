@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cologne Geothermal Screening, COG Viewer</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    #map { height: 100%; width: 100%; }
+
+    .panel {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 9999;
+      background: rgba(255,255,255,0.95);
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 6px 22px rgba(0,0,0,0.15);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      width: 280px;
+    }
+
+    .panel h1 {
+      font-size: 14px;
+      margin: 0 0 6px 0;
+    }
+
+    .panel p {
+      font-size: 12px;
+      margin: 6px 0;
+      line-height: 1.35;
+      color: #222;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .row label { font-size: 12px; white-space: nowrap; }
+    .row input[type="range"] { width: 100%; }
+
+    .legend {
+      margin-top: 8px;
+      font-size: 12px;
+    }
+
+    .legendbar {
+      height: 10px;
+      border-radius: 6px;
+      background: linear-gradient(to right, #d73027, #fee08b, #1a9850);
+      border: 1px solid rgba(0,0,0,0.15);
+      margin-top: 6px;
+    }
+
+    .legendticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #333;
+      margin-top: 4px;
+    }
+
+    .status {
+      font-size: 12px;
+      margin-top: 6px;
+      color: #444;
+    }
+
+    .small {
+      font-size: 11px;
+      color: #555;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+
+  <div class="panel">
+    <h1>Cologne, Shallow Geothermal Screening</h1>
+    <p>COG overlay rendered in the browser. This is a screening map, not a site specific assessment.</p>
+
+    <div class="row">
+      <label for="opacity">Opacity</label>
+      <input id="opacity" type="range" min="0" max="1" step="0.05" value="0.7" />
+    </div>
+
+    <div class="legend">
+      <div><b>Suitability</b> (low to high)</div>
+      <div class="legendbar"></div>
+      <div class="legendticks"><span>low</span><span>mid</span><span>high</span></div>
+    </div>
+
+    <div class="status" id="status">Loading GeoTIFF, please wait...</div>
+    <p class="small">
+      Tip, host this folder on Netlify, GitHub Pages, or any static server.
+      Opening the file locally can fail due to browser restrictions.
+    </p>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- GeoTIFF in browser -->
+  <script src="https://unpkg.com/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+  <script src="https://unpkg.com/proj4@2.9.0/dist/proj4.js"></script>
+  <script src="https://unpkg.com/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+  <script src="https://unpkg.com/georaster-layer-for-leaflet@3.2.1/dist/georaster-layer-for-leaflet.min.js"></script>
+
+  <script>
+    // Define common projections for Germany (Cologne is often EPSG:25832)
+    // We must define this BEFORE parsing the georaster
+    proj4.defs("EPSG:25832","+proj=utm +zone=32 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs");
+
+    const map = L.map("map").setView([50.94, 6.96], 11);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap contributors"
+    }).addTo(map);
+
+    const statusEl = document.getElementById("status");
+    const opacityEl = document.getElementById("opacity");
+
+    // Change this filename to your COG name
+    const geotiffUrl = "./output_erdkollektor_suit_cog.tif";
+
+    let overlayLayer = null;
+
+    // We'll determine min/max dynamically after loading
+    let minVal = 0;
+    let maxVal = 1;
+
+    function ramp(value) {
+      if (value === null || value === undefined || Number.isNaN(value)) return null;
+
+      // Normalize value to 0-1 range
+      let v;
+      if (maxVal === minVal) {
+        v = 0.5; 
+      } else {
+        v = (value - minVal) / (maxVal - minVal);
+      }
+      
+      // Clamp to 0-1
+      v = Math.max(0, Math.min(1, v));
+
+      // Simple 3-stop gradient: Red->Yellow->Green
+      const c1 = [0xD7, 0x30, 0x27];
+      const c2 = [0xFE, 0xE0, 0x8B];
+      const c3 = [0x1A, 0x98, 0x50];
+
+      let r, g, b;
+      if (v < 0.5) {
+        const t = v / 0.5;
+        r = Math.round(c1[0] + t * (c2[0] - c1[0]));
+        g = Math.round(c1[1] + t * (c2[1] - c1[1]));
+        b = Math.round(c1[2] + t * (c2[2] - c1[2]));
+      } else {
+        const t = (v - 0.5) / 0.5;
+        r = Math.round(c2[0] + t * (c3[0] - c2[0]));
+        g = Math.round(c2[1] + t * (c3[1] - c2[1]));
+        b = Math.round(c2[2] + t * (c3[2] - c2[2]));
+      }
+      return `rgb(${r},${g},${b})`;
+    }
+
+    // Check if running via file:// protocol
+    if (window.location.protocol === 'file:') {
+      statusEl.innerHTML = `<span style="color:red; font-weight:bold;">
+        WARNING: You are opening this via 'file://'. Modern browsers block fetch requests to local files for security.
+        Please run a local web server.
+      </span>`;
+    }
+
+    // Create a custom pane to ensure raster is on top
+    map.createPane('rasterPane');
+    map.getPane('rasterPane').style.zIndex = 450;
+
+    parseGeoraster(geotiffUrl).then(georaster => {
+      console.log("Georaster loaded:", georaster);
+
+      // 1. Determine Range
+      if (georaster.mins && georaster.maxs) {
+        minVal = georaster.mins[0];
+        maxVal = georaster.maxs[0];
+      } else {
+        console.warn("Metadata missing min/max.");
+      }
+      
+      // 2. Log Projection
+      // georaster.projection might be a PROJ integer (32632) or object
+      console.log("Projection:", georaster.projection);
+      
+      // 3. Create Layer
+      overlayLayer = new GeoRasterLayer({
+        georaster,
+        opacity: parseFloat(opacityEl.value),
+        resolution: 256,
+        pane: 'rasterPane', // Force high z-index
+        pixelValuesToColorFn: values => {
+          const v = values && values.length ? values[0] : null;
+          if (v === null || v === undefined || Number.isNaN(v)) return null;
+          if (georaster.noDataValue !== null && v === georaster.noDataValue) return null;
+          return ramp(v);
+        }
+      });
+
+      overlayLayer.addTo(map);
+
+      // 4. Fit Bounds
+      try {
+        const bounds = overlayLayer.getBounds();
+        map.fitBounds(bounds);
+        
+        statusEl.innerHTML = `
+          <b>Loaded!</b><br>
+          Range: ${minVal.toFixed(2)} - ${maxVal.toFixed(2)}<br>
+          Projection: ${georaster.projection}<br>
+          Size: ${georaster.width}x${georaster.height}
+        `;
+      } catch (e) {
+        console.error("FitBounds Error:", e);
+        statusEl.textContent = "Loaded, but bounds error. Check console.";
+      }
+
+    }).catch(err => {
+      console.error(err);
+      statusEl.innerHTML = `<span style="color:red;">Error: ${err.message}. Check console (F12).</span>`;
+    });
+
+    opacityEl.addEventListener("input", () => {
+      if (!overlayLayer) return;
+      overlayLayer.setOpacity(parseFloat(opacityEl.value));
+    });
+  </script>
+</body>
+</html>
