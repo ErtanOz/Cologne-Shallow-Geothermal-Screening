@@ -1,0 +1,13 @@
+<PAMDataset>
+  <PAMRasterBand band="1">
+    <Description>kollektor</Description>
+    <Metadata>
+      <MDI key="STATISTICS_APPROXIMATE">YES</MDI>
+      <MDI key="STATISTICS_MINIMUM">0.39999511302111</MDI>
+      <MDI key="STATISTICS_MAXIMUM">0.72116756957309</MDI>
+      <MDI key="STATISTICS_MEAN">0.62720889142723</MDI>
+      <MDI key="STATISTICS_STDDEV">0.076318620459001</MDI>
+      <MDI key="STATISTICS_VALID_PERCENT">76.13</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>
