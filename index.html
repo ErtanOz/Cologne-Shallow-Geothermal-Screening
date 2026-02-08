@@ -99,10 +99,7 @@
     </div>
 
     <div class="status" id="status">Loading GeoTIFF, please wait...</div>
-    <p class="small">
-      Tip, host this folder on Netlify, GitHub Pages, or any static server.
-      Opening the file locally can fail due to browser restrictions.
-    </p>
+
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -179,13 +176,7 @@
       return `rgb(${r},${g},${b})`;
     }
 
-    // Check if running via file:// protocol
-    if (window.location.protocol === 'file:') {
-      statusEl.innerHTML = `<span style="color:red; font-weight:bold;">
-        WARNING: You are opening this via 'file://'. Modern browsers block fetch requests to local files for security.
-        Please run a local web server (e.g. 'python -m http.server').
-      </span>`;
-    }
+
 
     console.log("Fetching GeoTIFF as ArrayBuffer:", geotiffUrl);
     statusEl.innerHTML = "Fetching file...";
