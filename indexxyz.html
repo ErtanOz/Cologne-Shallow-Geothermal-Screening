@@ -142,34 +142,35 @@
       .then(georaster => {
         console.log(`Loaded ${name}:`, georaster);
         
+        // Determine stats
+        const min = (georaster.mins && !isNaN(georaster.mins[0])) ? georaster.mins[0] : 0.4;
+        const max = (georaster.maxs && !isNaN(georaster.maxs[0])) ? georaster.maxs[0] : 0.8;
+        const noData = georaster.noDataValue;
+
         const layer = new GeoRasterLayer({
           georaster,
           opacity: options.opacity || 0.75,
           resolution: 256,
           pixelValuesToColorFn: values => {
-            // If the raster has 3 or 4 bands, it's already an RGB/RGBA visual
-            if (georaster.numberOfBands >= 3) {
-              const r = values[0];
-              const g = values[1];
-              const b = values[2];
-              const a = values[3] !== undefined ? values[3] / 255 : 1;
-              if (r === 0 && g === 0 && b === 0) return null; // Simple NoData for 0,0,0
-              return `rgba(${r},${g},${b},${a})`;
-            }
-            
-            // Otherwise, colorize based on value (Suitability)
             const v = values[0];
-            if (v === 0 || v === null || isNaN(v)) return null;
             
-            // Scale 0.4 - 0.72 (matches our analysis)
-            const t = Math.max(0, Math.min(1, (v - 0.4) / (0.72 - 0.4)));
+            // Transparency logic: 
+            // 1. If value is null/NaN
+            // 2. If value matches NoData
+            // 3. If value is 0 (typical GEE background)
+            if (v === null || v === undefined || isNaN(v) || v === 0 || v === noData) return null;
             
-            // Red-Yellow-Green ramp
+            // Dynamic scaling
+            const t = Math.max(0, Math.min(1, (v - min) / (max - min)));
+            
+            // Red-Yellow-Green ramp (ColorBlind Friendly / Standard Heatmap)
             if (t < 0.5) {
               const p = t * 2;
+              // Red (215, 48, 39) to Yellow (254, 224, 139)
               return `rgb(${Math.round(215 + p * (254-215))}, ${Math.round(48 + p * (224-48))}, ${Math.round(39 + p * (139-39))})`;
             } else {
               const p = (t - 0.5) * 2;
+              // Yellow (254, 224, 139) to Green (26, 152, 80)
               return `rgb(${Math.round(254 + p * (26-254))}, ${Math.round(224 + p * (152-224))}, ${Math.round(139 + p * (80-139))})`;
             }
           }
@@ -178,21 +179,18 @@
         layerControl.addOverlay(layer, name);
         if (options.visible) layer.addTo(map);
         
-        statusEl.innerHTML = `Loaded: ${name}`;
+        statusEl.innerHTML = `Loaded: ${name} (${min.toFixed(2)}-${max.toFixed(2)})`;
       })
       .catch(err => {
         console.error(`Error loading ${name}:`, err);
-        statusEl.innerHTML = `Error loading ${name}`;
+        statusEl.innerHTML = `<span style="color:red">Error loading ${name}</span>`;
       });
   }
 
   // Load the TIFF files directly
-  // We use the "color" versions for visualization if available, 
-  // or fall back to the data files we found in the folders.
-  
-  // Note: tiles_erdsonde and tiles_kollektor contain 'erdsonde_color.tif'
-  loadLayer('./tiles_erdsonde/erdsonde_color.tif', 'Borehole Suitability', { visible: true });
-  loadLayer('./tiles_kollektor/erdsonde_color.tif', 'Collector Suitability', { visible: false });
+  // Using the COG/Data files for best results
+  loadLayer('./tiles_erdsonde/erdsonde_cog2.tif', 'Borehole Suitability (Erdsonde)', { visible: true });
+  loadLayer('./output_erdkollektor_suit_cog.tif', 'Collector Suitability (Kollektor)', { visible: false });
 
 </script>
 
