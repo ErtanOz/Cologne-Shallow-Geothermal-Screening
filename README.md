@@ -4,6 +4,8 @@
 
 This project provides a **Google Earth Engine (GEE)** screening for shallow **geothermal potential in Cologne**. The map shows relative suitability, intended to identify where more detailed site-specific studies are worth pursuing.
 
+<img width="1918" height="1028" alt="Screenshot 2026-02-07 231941" src="https://github.com/user-attachments/assets/e171b9f8-6a63-43d1-aeee-ab41722d2b35" />
+
 ### 🗺️ Suitability Legend
 
 - 🟢 **Green:** Favorable conditions
