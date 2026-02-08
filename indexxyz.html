@@ -187,10 +187,20 @@
       });
   }
 
-  // Load the TIFF files directly
-  // Using the COG/Data files for best results
-  loadLayer('./tiles_erdsonde/erdsonde_cog2.tif', 'Borehole Suitability (Erdsonde)', { visible: true });
-  loadLayer('./output_erdkollektor_suit_cog.tif', 'Collector Suitability (Kollektor)', { visible: false });
+  // --- COG LAYERS (Dynamic TIFF) ---
+  loadLayer('./tiles_erdsonde/erdsonde_cog2.tif', '<b>COG:</b> Borehole (Dynamic)', { visible: true });
+  loadLayer('./output_erdkollektor_suit_cog.tif', '<b>COG:</b> Collector (Dynamic)', { visible: false });
+
+  // --- XYZ LAYERS (Fast PNG Tiles) ---
+  const xyzErdsonde = L.tileLayer('./tiles_erdsonde/xyz_demo/{z}/{x}/{y}.png', {
+    maxZoom: 16, minZoom: 11, opacity: 0.75, attribution: 'XYZ Erdsonde'
+  });
+  layerControl.addOverlay(xyzErdsonde, '<b>XYZ:</b> Borehole (Fast)');
+
+  const xyzKollektor = L.tileLayer('./tiles_kollektor/xyz_demo/{z}/{x}/{y}.png', {
+    maxZoom: 16, minZoom: 11, opacity: 0.75, attribution: 'XYZ Kollektor'
+  });
+  layerControl.addOverlay(xyzKollektor, '<b>XYZ:</b> Collector (Fast)');
 
 </script>
 
