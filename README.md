@@ -36,7 +36,7 @@ For more precise and robust results, additional data layers are required:
 ### 🔗 Links
 
 - **Interactive GEE Screening (for GEE users):** [View on GEE](https://code.earthengine.google.com/?accept_repo=users/ertanoz/Cologne_Geothermal_Screening) _(Reference link provided: https://lnkd.in/ezzMANKb)_
-- **Web Viewer:** [Demo Link](https://ertanoz.github.io/Cologne-Shallow-Geothermal-Screening/) (If hosted on GitHub Pages)
+- **Web Viewer:** [Demo Link](https://ertanoz.github.io/Cologne-Shallow-Geothermal-Screening/) (hosted on GitHub Pages)
 
 ---
 
